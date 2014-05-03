@@ -9,6 +9,8 @@ from unidecode import unidecode
 from exportfuction import extractdata
 from tabulate import tabulate
 import os.path
+import ConfigParser
+import time
 
 
 # Define our own error class
@@ -29,6 +31,10 @@ class InputError(Error):
                 self.msg = msg
         def __str__(self):
                 return repr(self.expr+" had value "+self.data)
+
+# Read session file
+sessiondata = ConfigParser.ConfigParser()
+sessiondata.read("sessiondata.txt")
 
 # Parse some commandline switches
 parser = argparse.ArgumentParser(description='Screen scrape data from Honeywell Excel Web controller')
@@ -54,7 +60,13 @@ l_password = "qqqqq"
 # Other Variables
 l_localeid = "1033" #This is the language setting of the controller
 c_session_expected_response = "4194561" #This number indicates a successful session creation
-csession_id = "" #Create the empty session id Variable
+try:
+	csession_id = sessiondata.get(sessiondetails, session_id)
+	session_creation_time = sessiondata.get(sessiondetails, creationtime)
+	if (not csession_id) or ((time.time()-session_creation_time) > 3600):
+			csession_id = "" #Create the empty session id Variable
+except:
+	csession_id = "" #Create the empty session id Variable
 
 datapoints_response = []
 login_response = []
@@ -82,10 +94,10 @@ def checksession(): #Check if we have a working login session
 		]
 		posturldata = urllib.urlencode(parameters) #Encode the parameters in the proper format for posting
 		br.open('http://'+l_controllerip+'/standard/mainframe.php',posturldata)
-		cj.save(COOKIEFILE)
+		cj.save(cookiefile)
 	else:
 		br.open('http://'+l_controllerip+'/standard/mainframe.php')
-		cj.save(COOKIEFILE)
+		cj.save(cookiefile)
 	l_checksession_response = br.response().read()
 	l_soup = BeautifulSoup(l_checksession_response)
 	if (len(l_soup.findAll("frame"))) < 2:
@@ -155,7 +167,18 @@ def createsession(): #Function to create a valid session ID
 	posturldata = urllib.urlencode(parameters) #Encode the paraters in the proper Format for posting
 	#This request will log us in
 	br.open('http://'+l_controllerip+'/standard/mainframe.php',posturldata)
-	cj.save(COOKIEFILE)
+	cj.save(cookiefile)
+
+	#Save the session id in our session file
+	sessionfile = open("sessiondata.txt","w")
+	try:
+		sessiondata.add_section("sessiondetails")
+	except:
+		pass
+	sessiondata.set("sessiondetails","session_id",csession_id)
+	sessiondata.set("sessiondetails","session_creation_time",time.time())
+	sessiondata.write(sessionfile)
+	sessionfile.close()
 	#Keep the response just in case
 	l_createsession_response = br.response().read()
 	return l_createsession_response
@@ -171,7 +194,7 @@ def getdatapage():
 	posturldata = urllib.urlencode(parameters) #Encode the paraters in the proper format for posting
 	#This request will give us the first set of data
 	br.open('http://'+l_controllerip+'/standard/datapoints/datapoints.php',posturldata)
-	cj.save(COOKIEFILE)
+	cj.save(cookiefile)
 	#Of course we want to keep the response
 	datapoints_response.append(unidecode(br.response().read().decode("UTF-8")))
 	return
@@ -226,7 +249,7 @@ def getadditionalpage(pagenum):
 	#print posturldata
 
 	br.open('http://'+l_controllerip+'/standard/datapoints/datapoints.php',posturldata)
-	cj.save(COOKIEFILE)
+	cj.save(cookiefile)
 	datapoints_response.append(unidecode(br.response().read().decode("UTF-8")))
 	checkadditionalpage()
 	return
@@ -246,7 +269,7 @@ def logout():
 	#print posturldata
 
 	br.open('http://'+l_controllerip+'/standard/footer/footer.php',posturldata)
-	cj.save(COOKIEFILE)
+	cj.save(cookiefile)
 	l_logout_response = br.response().read()
 	return l_logout_response
 

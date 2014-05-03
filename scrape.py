@@ -210,7 +210,7 @@ def getadditionalpage(pagenum):
 	("EntriesPerPage" , "50")
 	]
 
-	posturldata = urllib.urlencode(parameters) #Encode the paraters in the proper Format for posting
+	posturldata = urllib.urlencode(parameters) #Encode the parameters in the proper Format for posting
 	posturldata = posturldata.replace("%2A","*") #The Asterisk should not be encoded though
 	#print posturldata
 

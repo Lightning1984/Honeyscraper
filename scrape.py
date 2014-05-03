@@ -36,6 +36,7 @@ class InputError(Error):
 sessiondata = ConfigParser.ConfigParser()
 sessiondata.read("sessiondata.txt")
 
+
 # Parse some commandline switches
 parser = argparse.ArgumentParser(description='Screen scrape data from Honeywell Excel Web controller')
 parser.add_argument('-i','--ip', help='The IP of the controller to scrape', required=True)
@@ -61,15 +62,20 @@ l_password = "qqqqq"
 l_localeid = "1033" #This is the language setting of the controller
 c_session_expected_response = "4194561" #This number indicates a successful session creation
 try:
-	csession_id = sessiondata.get(sessiondetails, session_id)
-	session_creation_time = sessiondata.get(sessiondetails, creationtime)
-	if (not csession_id) or ((time.time()-session_creation_time) > 3600):
-			csession_id = "" #Create the empty session id Variable
+	csession_id = sessiondata.get("sessiondetails", "session_id")
+	session_creation_time = sessiondata.get("sessiondetails", "session_creation_time")
+	if (not csession_id) or ((time.time()-float(session_creation_time)) > 3600):
+		csession_id = "" #Create the empty session id Variable
 except:
 	csession_id = "" #Create the empty session id Variable
 
+print csession_id
+#raise InputError("bis daheer und ned weiter")
+
 datapoints_response = []
 login_response = []
+
+
 
 # Browser options
 br.set_handle_equiv(True)
@@ -101,9 +107,9 @@ def checksession(): #Check if we have a working login session
 	l_checksession_response = br.response().read()
 	l_soup = BeautifulSoup(l_checksession_response)
 	if (len(l_soup.findAll("frame"))) < 2:
-		l_loginvalid = True
-	else:
 		l_loginvalid = False
+	else:
+		l_loginvalid = True
 	return l_checksession_response
 
 def createsession(): #Function to create a valid session ID
@@ -276,9 +282,11 @@ def logout():
 
 
 checksession()
-createsession()
-getdatapage()
+if l_loginvalid == False:
+	createsession()
 
+getdatapage()
+checkadditionalpage()
 
 """
 print "first response"

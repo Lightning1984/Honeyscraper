@@ -8,6 +8,8 @@ import re
 from unidecode import unidecode
 from exportfuction import extractdata
 from tabulate import tabulate
+import os.path
+
 
 # Define our own error class
 class Error(Exception):
@@ -38,8 +40,11 @@ br = mechanize.Browser()
 
 # Cookie Jar
 cookiefile = "cookiefile.txt"
-cj = cookielib.LWPCookieJar(cookiefile)
+cj = cookielib.LWPCookieJar()
+if os.path.isfile(cookiefile):
+	cj.load(cookiefile)
 br.set_cookiejar(cj)
+
 
 # Honeywell Controller IP
 l_controllerip = args.ip
@@ -92,7 +97,7 @@ def createsession(): #Function to create a valid session ID
 	global csession_response_code
 	global csession_id
 	l_createsession = ('http://'+l_controllerip+'/standard/login/session.php')
-	br.open(l_creatsession)
+	br.open(l_createsession)
 	createsession_response = br.response().read()
 
 	#extraction our login session ID

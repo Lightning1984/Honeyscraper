@@ -48,7 +48,8 @@ l_password = "qqqqq"
 
 # Other Variables
 l_localeid = "1033" #This is the language setting of the controller
-c_session_expected_response = "4194561"
+c_session_expected_response = "4194561" #This number indicates a successful session creation
+csession_id = "" #Create the empty session id Variable
 
 datapoints_response = []
 login_response = []

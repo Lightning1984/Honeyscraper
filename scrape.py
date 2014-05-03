@@ -37,7 +37,7 @@ args = parser.parse_args()
 br = mechanize.Browser()
 
 # Cookie Jar
-cj = cookielib.LWPCookieJar()
+cj = cookielib.LWPCookieJar(testfile.txt)
 br.set_cookiejar(cj)
 
 # Honeywell Controller IP
@@ -167,9 +167,9 @@ def getdatapage():
 	datapoints_response.append(unidecode(br.response().read().decode("UTF-8")))
 	return
 
-#define function to check if there is another page
-#Now it might be time for the second page, thanks to Honeywell quite a P i t A
 def checkadditionalpage():
+	#define function to check if there is another page
+	#Now it might be time for the second page, thanks to Honeywell quite a P i t A
 	global pagenum
 	soup = BeautifulSoup(datapoints_response[(pagenum-1)])
 	sites = soup.findAll("a", attrs={"class": "pagelink"})
@@ -184,8 +184,9 @@ def checkadditionalpage():
 		break
 	return
 
-#define function to get additional pages
 def getadditionalpage(pagenum):
+	#define function to get additional pages
+	global datapoints_response
 	parameters = [
 	("SessionID" , csession_id),
 	("LocaleID" , l_localeid),
@@ -216,16 +217,12 @@ def getadditionalpage(pagenum):
 	#print posturldata
 
 	br.open('http://'+l_controllerip+'/standard/datapoints/datapoints.php',posturldata)
-	global datapoints_response
 	datapoints_response.append(unidecode(br.response().read().decode("UTF-8")))
 	checkadditionalpage()
 	return
 
-#lets see if there is more pages to fetch, if so retrieve them
-checkadditionalpage()
-
-#When we have finished reading the data, it might be time to close the session
 def logout():
+	#When we have finished reading the data, it might be time to close the session
 	parameters = [
 	("Command" , "Logout"),
 	("LocaleID" , l_localeid),
@@ -241,6 +238,13 @@ def logout():
 	br.open('http://'+l_controllerip+'/standard/footer/footer.php',posturldata)
 	l_logout_response = br.response().read()
 	return l_logout_response
+
+
+
+checksession()
+createsession()
+getdatapage()
+
 
 """
 print "first response"

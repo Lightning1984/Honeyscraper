@@ -37,7 +37,8 @@ args = parser.parse_args()
 br = mechanize.Browser()
 
 # Cookie Jar
-cj = cookielib.LWPCookieJar(testfile.txt)
+cookiefile = "cookiefile.txt"
+cj = cookielib.LWPCookieJar(cookiefile)
 br.set_cookiejar(cj)
 
 # Honeywell Controller IP

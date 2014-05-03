@@ -9,7 +9,7 @@ from unidecode import unidecode
 from exportfuction import extractdata
 from tabulate import tabulate
 
-# Define our own error classi
+# Define our own error class
 class Error(Exception):
         """Base class for exceptions in this module."""
         pass

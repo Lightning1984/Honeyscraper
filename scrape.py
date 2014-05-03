@@ -45,7 +45,6 @@ if os.path.isfile(cookiefile):
 	cj.load(cookiefile)
 br.set_cookiejar(cj)
 
-
 # Honeywell Controller IP
 l_controllerip = args.ip
 # Login Credentials

@@ -82,8 +82,10 @@ def checksession(): #Check if we have a working login session
 		]
 		posturldata = urllib.urlencode(parameters) #Encode the parameters in the proper format for posting
 		br.open('http://'+l_controllerip+'/standard/mainframe.php',posturldata)
+		cj.save(COOKIEFILE)
 	else:
 		br.open('http://'+l_controllerip+'/standard/mainframe.php')
+		cj.save(COOKIEFILE)
 	l_checksession_response = br.response().read()
 	l_soup = BeautifulSoup(l_checksession_response)
 	if (len(l_soup.findAll("frame"))) < 2:
@@ -153,6 +155,7 @@ def createsession(): #Function to create a valid session ID
 	posturldata = urllib.urlencode(parameters) #Encode the paraters in the proper Format for posting
 	#This request will log us in
 	br.open('http://'+l_controllerip+'/standard/mainframe.php',posturldata)
+	cj.save(COOKIEFILE)
 	#Keep the response just in case
 	l_createsession_response = br.response().read()
 	return l_createsession_response
@@ -168,6 +171,7 @@ def getdatapage():
 	posturldata = urllib.urlencode(parameters) #Encode the paraters in the proper format for posting
 	#This request will give us the first set of data
 	br.open('http://'+l_controllerip+'/standard/datapoints/datapoints.php',posturldata)
+	cj.save(COOKIEFILE)
 	#Of course we want to keep the response
 	datapoints_response.append(unidecode(br.response().read().decode("UTF-8")))
 	return
@@ -222,6 +226,7 @@ def getadditionalpage(pagenum):
 	#print posturldata
 
 	br.open('http://'+l_controllerip+'/standard/datapoints/datapoints.php',posturldata)
+	cj.save(COOKIEFILE)
 	datapoints_response.append(unidecode(br.response().read().decode("UTF-8")))
 	checkadditionalpage()
 	return
@@ -241,6 +246,7 @@ def logout():
 	#print posturldata
 
 	br.open('http://'+l_controllerip+'/standard/footer/footer.php',posturldata)
+	cj.save(COOKIEFILE)
 	l_logout_response = br.response().read()
 	return l_logout_response
 

@@ -67,7 +67,7 @@ br.set_handle_refresh(mechanize._http.HTTPRefreshProcessor(), max_time=1)
 # User-Agent (this is cheating, ok?)
 br.addheaders = [('User-agent', 'Mozilla/5.0 (X11; U; Linux i686; en-US; rv:1.9.0.1) Gecko/2008071615 Fedora/3.0.1-1.fc9 Firefox/3.0.1')]
 
-def checksession(csession_id, ) #Check if we have a working login session
+def checksession(csession_id, l_localeid): #Check if we have a working login session
         parameters = [
         ("SessionID" , csession_id),
         ("LocaleID" , l_localeid)

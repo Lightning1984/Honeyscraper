@@ -1,6 +1,6 @@
 def checksession(): #Check if we have a working login session
 	global l_loginvalid
-	if csession_id and l_localeid:
+	if "csession_id" in globals() and "l_localeid" in globals():
 		parameters = [
 		("SessionID" , csession_id),
 		("LocaleID" , l_localeid)

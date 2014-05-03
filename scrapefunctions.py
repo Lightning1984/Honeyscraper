@@ -1,4 +1,4 @@
-def checksession(): #Check if we have a working login session
+def checksession(): #Check if we have a working login sessiona
 	global l_loginvalid
 	if "csession_id" in globals() and "l_localeid" in globals():
 		parameters = [

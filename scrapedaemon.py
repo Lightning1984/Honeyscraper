@@ -7,7 +7,6 @@ from daemon import runner
 
 
 class App():
-
     def __init__(self):
         self.stdin_path = '/dev/null'
         self.stdout_path = '/dev/tty'
@@ -17,8 +16,8 @@ class App():
 
     def run(self):
         filepath = '/tmp/mydaemon/currenttime.txt'
-dirpath = os.path.dirname(filepath)
-while True:
+		dirpath = os.path.dirname(filepath)
+		while True:
             if not os.path.exists(dirpath) or not os.path.isdir(dirpath):
                 os.makedirs(dirpath)
             f = open(filepath, 'w')

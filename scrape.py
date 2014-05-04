@@ -11,6 +11,7 @@ from tabulate import tabulate
 import os.path
 import ConfigParser
 import time
+import datetime
 
 
 # Define our own error class
@@ -322,14 +323,18 @@ for index, data in enumerate(scrapedata):
 #	print i
 
 urlstring = ','.join([string for string in updateelements])
+postdata = [("json","{"+urlstring+"}"),("apikey","ed450805d09809d49d3fc31c11c72913"),("node","15")]
+encoded_urldata = urllib.urlencode(postdata)
 
-postdata = "json={"+urlstring+"}&node=15&apikey=ed450805d09809d49d3fc31c11c72913"
 
 #print urlstring
 #print postdata
+#print encoded_urldata
 
-br.open('http://knx-server03/emoncms/input/post.json',postdata)
+
+br.open("http://knx-server03/emoncms/input/post.json?"+encoded_urldata)
 output = br.response().read()
+print datetime.datetime.now()
 print output
 
 #print tabulate(scrapedata)

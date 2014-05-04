@@ -64,7 +64,8 @@ c_session_expected_response = "4194561" #This number indicates a successful sess
 try:
 	csession_id = sessiondata.get("sessiondetails", "session_id")
 	session_creation_time = sessiondata.get("sessiondetails", "session_creation_time")
-	if (not csession_id) or ((time.time()-float(session_creation_time)) > 3600):
+	#if (not csession_id) or ((time.time()-float(session_creation_time)) > 3600):
+	if (not csession_id):
 		csession_id = "" #Create the empty session id Variable
 except:
 	csession_id = "" #Create the empty session id Variable

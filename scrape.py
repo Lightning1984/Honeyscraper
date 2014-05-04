@@ -40,6 +40,7 @@ sessiondata.read("sessiondata.txt")
 # Parse some commandline switches
 parser = argparse.ArgumentParser(description='Screen scrape data from Honeywell Excel Web controller')
 parser.add_argument('-i','--ip', help='The IP of the controller to scrape', required=True)
+parser.add_argument('-s','--iptwo', help='The IP of the second controller to scrape all in one go', required=False)
 args = parser.parse_args()
 
 # Browser
@@ -54,6 +55,7 @@ br.set_cookiejar(cj)
 
 # Honeywell Controller IP
 l_controllerip = args.ip
+l_controlleriptwo = args.iptwo
 # Login Credentials
 l_username = "SystemAdmin"
 l_password = "qqqqq"
@@ -70,7 +72,7 @@ try:
 except:
 	csession_id = "" #Create the empty session id Variable
 
-print csession_id
+#print csession_id
 #raise InputError("bis daheer und ned weiter")
 
 datapoints_response = []
@@ -210,7 +212,7 @@ def checkadditionalpage():
 	#define function to check if there is another page
 	#Now it might be time for the second page, thanks to Honeywell quite a P i t A
 	global pagenum
-	soup = BeautifulSoup(datapoints_response[(pagenum-1)])
+	soup = BeautifulSoup(datapoints_response[(len(datapoints_response)-1)])
 	sites = soup.findAll("a", attrs={"class": "pagelink"})
 	nextpagefilter = re.compile('\"JavaScript\:goToPage \(([0-9]+)\)\;\"')
 	for index, data in enumerate(sites):
@@ -289,6 +291,14 @@ if l_loginvalid == False:
 getdatapage()
 checkadditionalpage()
 
+if l_controlleriptwo:
+	l_controllerip = l_controlleriptwo
+	checksession()
+	if l_loginvalid == False:
+       		createsession()
+	getdatapage()
+	checkadditionalpage()
+
 """
 print "first response"
 print "++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++"
@@ -298,10 +308,31 @@ print "second response"
 print "++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++"
 """
 scrapedata = extractdata(datapoints_response)
-#for i in scrapedata:
-#       print i
+interresting = [1,2,3,6,7,8,9,10,11,4194305,4194306,4194307,4194308,8388609,8388610,8388612,8388613,8388614,8388616,8388619,8388622,8388630,8388631,8388654,8388655,8388664,8388665,8388667,8388668,8388669,8388671]
 
-print tabulate(scrapedata)
+updateelements = []
+
+for index, data in enumerate(scrapedata):
+	if int(data[0]) in interresting:
+		updateelements.append(str((str(data[1])[:2])+" "+data[2]+":"+data[3]))
+		#print data	
+
+
+#for i in updateelements:
+#	print i
+
+urlstring = ','.join([string for string in updateelements])
+
+postdata = "json={"+urlstring+"}&node=15&apikey=ed450805d09809d49d3fc31c11c72913"
+
+#print urlstring
+#print postdata
+
+br.open('http://knx-server03/emoncms/input/post.json',postdata)
+output = br.response().read()
+print output
+
+#print tabulate(scrapedata)
 """
 
 for index, workwith in enumerate(datapoints_response):

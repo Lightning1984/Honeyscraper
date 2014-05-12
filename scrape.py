@@ -436,6 +436,8 @@ if len(statuselemetsnewvalues) > 0 and not args.no_mysql_update:
 		# Rollback in case there is any error
 		db.rollback()
 		print "MySQL database update Failed"
+else: 
+	if not args.no_mysql_update: print "0 Records inserted into MySql datapoint changelog table"
 #print tabulate(scrapedata)
 
 

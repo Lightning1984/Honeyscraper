@@ -12,6 +12,7 @@ import os.path
 import ConfigParser
 import time
 import datetime
+import MySQLdb
 
 
 # Define our own error class
@@ -309,35 +310,101 @@ print "second response"
 print "++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++"
 """
 scrapedata = extractdata(datapoints_response)
-interresting = [1,2,3,6,7,8,9,10,11,4194305,4194306,4194307,4194308,8388609,8388610,8388612,8388613,8388614,8388616,8388619,8388622,8388630,8388631,8388654,8388655,8388664,8388665,8388667,8388668,8388669,8388671]
 
-updateelements = []
+#The following list of Datapoints contain constantly changing numeric values (Temperatures, Valve positions, etc)
+numericdatapoint = [1,2,3,6,7,8,9,10,11,4194305,4194306,4194307,4194308,8388609,8388610,8388612,8388613,8388614,8388616,8388619,8388622,8388630,8388631,8388654,8388655,8388664,8388665,8388667,8388668,8388669,8388671]
+
+#open the Mysql DB for status datapoints
+db = MySQLdb.connect("localhost","heatingupdater","BDND2zJ6Dj4DX3nU","heatingdata" )
+dbcursor = db.cursor()
+
+#fetch the last values from all datapoints
+dbquery = """select datapoint_id,value,state,flags from ( select *  from datapointchangelog order by timestamp desc ) x group by datapoint_id"""
+
+try:
+	# Execute the SQL command
+	dbcursor.execute(dbquery)
+	# Fetch all the rows in a list of lists.
+	statuselemetsoldvalues = dbcursor.fetchall()
+except:
+	print "Error: unable to fetch data"
+	pass
+
+	
+#iterate through the scraped data and extract data elemnts
+numericelements = []
+statuselements =[[]]
 
 for index, data in enumerate(scrapedata):
-	if int(data[0]) in interresting:
-		updateelements.append(str((str(data[1])[:2])+" "+data[2]+":"+data[3]))
-		#print data	
+	if index > 0: #We need a new column before we can start adding further stuff
+               	statuselements.append([])
+	if int(data[0]) in numericdatapoint:
+		numericelements.append(str((str(data[1])[:6])+" "+data[2]+":"+data[3]))
+		statuselements[(len(statuselements))-1].append(str(data[0]))
+		statuselements[(len(statuselements))-1].append("numericdp")
+		statuselements[(len(statuselements))-1].append(str(data[5]))
+		statuselements[(len(statuselements))-1].append(str(data[7]))
+	else:
+		statuselements[(len(statuselements))-1].append(str(data[0]))
+		statuselements[(len(statuselements))-1].append(str(data[3]))
+		statuselements[(len(statuselements))-1].append(str(data[5]))
+		statuselements[(len(statuselements))-1].append(str(data[7]))
+		
 
-
-#for i in updateelements:
-#	print i
-
-urlstring = ','.join([string for string in updateelements])
+#Create get request update statement for feeding numeric values into emoncms
+urlstring = ','.join([string for string in numericelements])
 postdata = [("json","{"+urlstring+"}"),("apikey","ed450805d09809d49d3fc31c11c72913"),("node","15")]
 encoded_urldata = urllib.urlencode(postdata)
-
 
 #print urlstring
 #print postdata
 #print encoded_urldata
 
-
+#Feed numerical datapoints data into emon cms
 br.open("http://knx-server03/emoncms/input/post.json?"+encoded_urldata)
 output = br.response().read()
 print datetime.datetime.now()
 print output
 
+#Check if a Status value changed
+statuselemetsnewvalues = []
+for index, data in enumerate(statuselements):
+	#print data[0]
+	try:
+		[item for item in statuselemetsoldvalues if long(item[0]) == long(data[0]) and item[1] == data[1] and item[2] == data[2] and long(item[3]) == long(data[3])][0]
+		#print data
+	except:
+		#print "fail"
+		#print [item for item in statuselemetsoldvalues if long(item[0]) == long(data[0])][0]
+		statuselemetsnewvalues.append(data)
+		#print ""
+		pass
+
 #print tabulate(scrapedata)
+#print statuselemetsnewvalues
+
+#Create the insert statement for the changed datapoints
+dbquery = """INSERT INTO `datapointchangelog` (datapoint_id, value, state, flags) VALUES (%s, %s, %s, %s ) """
+
+#print(dbquery, statuselemetsnewvalues)
+
+
+#If something changed log the changes to the mysql db
+if len(statuselemetsnewvalues) > 0:
+	try:
+		# Execute the SQL command
+		dbcursor.executemany(dbquery,statuselemetsnewvalues)
+		# Commit your changes in the database
+		db.commit()
+	except:
+		# Rollback in case there is any error
+		db.rollback()
+#print tabulate(scrapedata)
+
+
+print str(len(statuselemetsnewvalues))+" Records inserted into MySql datapoint changelog table"
+
+#print len(updateelements)
 """
 
 for index, workwith in enumerate(datapoints_response):
@@ -358,3 +425,6 @@ print "++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++"
 print datapoints_response[3]
 print "############################################################"
 """
+
+# disconnect from databaseserver
+db.close()

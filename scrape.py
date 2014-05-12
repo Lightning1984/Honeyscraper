@@ -43,6 +43,12 @@ sessiondata.read("sessiondata.txt")
 parser = argparse.ArgumentParser(description='Screen scrape data from Honeywell Excel Web controller')
 parser.add_argument('-i','--ip', help='The IP of the controller to scrape', required=True)
 parser.add_argument('-s','--iptwo', help='The IP of the second controller to scrape all in one go', required=False)
+parser.add_argument('--printdp', help='print all datapoints to stdout', required=False, action='store_true')
+parser.add_argument('--no_mysql_update', help='omit exporting status flags to Mysql Database', required=False, action='store_true')
+parser.add_argument('--no_emoncms_update', help='omit exporting numerical values to EmonCMS Database', required=False, action='store_true')
+parser.add_argument('--export_dpnames', help='export Datapoint names into Mysql Database name correlation table', required=False, action='store_true')
+parser.add_argument('--print_dpnames', help='print Datapoint name table to stdout', required=False, action='store_true')
+
 args = parser.parse_args()
 
 # Browser
@@ -58,6 +64,10 @@ br.set_cookiejar(cj)
 # Honeywell Controller IP
 l_controllerip = args.ip
 l_controlleriptwo = args.iptwo
+
+#timeout
+browsertimeout = 4
+
 # Login Credentials
 l_username = "SystemAdmin"
 l_password = "qqqqq"
@@ -104,10 +114,10 @@ def checksession(): #Check if we have a working login session
 		("LocaleID" , l_localeid)
 		]
 		posturldata = urllib.urlencode(parameters) #Encode the parameters in the proper format for posting
-		br.open('http://'+l_controllerip+'/standard/mainframe.php',posturldata)
+		br.open('http://'+l_controllerip+'/standard/mainframe.php',posturldata,timeout=browsertimeout)
 		cj.save(cookiefile)
 	else:
-		br.open('http://'+l_controllerip+'/standard/mainframe.php')
+		br.open('http://'+l_controllerip+'/standard/mainframe.php',timeout=browsertimeout)
 		cj.save(cookiefile)
 	l_checksession_response = br.response().read()
 	l_soup = BeautifulSoup(l_checksession_response)
@@ -121,7 +131,7 @@ def createsession(): #Function to create a valid session ID
 	global csession_response_code
 	global csession_id
 	l_createsession = ('http://'+l_controllerip+'/standard/login/session.php')
-	br.open(l_createsession)
+	br.open(l_createsession,timeout=browsertimeout)
 	createsession_response = br.response().read()
 
 	#extraction our login session ID
@@ -177,7 +187,7 @@ def createsession(): #Function to create a valid session ID
 	]
 	posturldata = urllib.urlencode(parameters) #Encode the paraters in the proper Format for posting
 	#This request will log us in
-	br.open('http://'+l_controllerip+'/standard/mainframe.php',posturldata)
+	br.open('http://'+l_controllerip+'/standard/mainframe.php',posturldata,timeout=browsertimeout)
 	cj.save(cookiefile)
 
 	#Save the session id in our session file
@@ -204,7 +214,7 @@ def getdatapage():
 	]
 	posturldata = urllib.urlencode(parameters) #Encode the paraters in the proper format for posting
 	#This request will give us the first set of data
-	br.open('http://'+l_controllerip+'/standard/datapoints/datapoints.php',posturldata)
+	br.open('http://'+l_controllerip+'/standard/datapoints/datapoints.php',posturldata,timeout=browsertimeout)
 	cj.save(cookiefile)
 	#Of course we want to keep the response
 	datapoints_response.append(unidecode(br.response().read().decode("UTF-8")))
@@ -259,7 +269,7 @@ def getadditionalpage(pagenum):
 	posturldata = posturldata.replace("%2A","*") #The Asterisk should not be encoded though
 	#print posturldata
 
-	br.open('http://'+l_controllerip+'/standard/datapoints/datapoints.php',posturldata)
+	br.open('http://'+l_controllerip+'/standard/datapoints/datapoints.php',posturldata,timeout=browsertimeout)
 	cj.save(cookiefile)
 	datapoints_response.append(unidecode(br.response().read().decode("UTF-8")))
 	checkadditionalpage()
@@ -279,7 +289,7 @@ def logout():
 	posturldata = urllib.urlencode(parameters)
 	#print posturldata
 
-	br.open('http://'+l_controllerip+'/standard/footer/footer.php',posturldata)
+	br.open('http://'+l_controllerip+'/standard/footer/footer.php',posturldata,timeout=browsertimeout)
 	cj.save(cookiefile)
 	l_logout_response = br.response().read()
 	return l_logout_response
@@ -361,10 +371,11 @@ encoded_urldata = urllib.urlencode(postdata)
 #print encoded_urldata
 
 #Feed numerical datapoints data into emon cms
-br.open("http://knx-server03/emoncms/input/post.json?"+encoded_urldata)
-output = br.response().read()
-print datetime.datetime.now()
-print output
+if not args.no_emoncms_update:
+	br.open("http://knx-server03/emoncms/input/post.json?"+encoded_urldata,timeout=browsertimeout)
+	output = br.response().read()
+	print datetime.datetime.now()
+	print output
 
 #Check if a Status value changed
 statuselemetsnewvalues = []
@@ -380,7 +391,31 @@ for index, data in enumerate(statuselements):
 		#print ""
 		pass
 
-#print tabulate(scrapedata)
+#Print All datapoints to stdout
+if args.printdp:
+	print tabulate(scrapedata)
+
+#Generate a list of all Datapoint Names
+if args.export_dpnames or args.print_dpnames:
+	dpnames = []
+	for index, data in enumerate(scrapedata):
+		dpnames.append((data[0],data[1],data[2]))
+	if args.print_dpnames: print tabulate(dpnames)
+	if args.export_dpnames:
+		dbtruncate = """TRUNCATE TABLE `datapointnames`  """
+		dbinsert = """INSERT INTO `datapointnames` (datapoint_id, dpname, dpdescription) VALUES (%s, %s, %s ) """
+		try:
+			# Execute the SQL command
+			dbcursor.execute(dbtruncate)
+			dbcursor.executemany(dbinsert,dpnames)
+			# Commit your changes in the database
+			db.commit()
+			print str(len(dpnames))+" Records inserted into MySql Datapoint name Table"
+	        except:
+			# Rollback in case there is any error
+			db.rollback()
+			print "MySQL Datpoint name Table update Failed"
+
 #print statuselemetsnewvalues
 
 #Create the insert statement for the changed datapoints
@@ -390,19 +425,20 @@ dbquery = """INSERT INTO `datapointchangelog` (datapoint_id, value, state, flags
 
 
 #If something changed log the changes to the mysql db
-if len(statuselemetsnewvalues) > 0:
+if len(statuselemetsnewvalues) > 0 and not args.no_mysql_update:
 	try:
 		# Execute the SQL command
 		dbcursor.executemany(dbquery,statuselemetsnewvalues)
 		# Commit your changes in the database
 		db.commit()
+		print str(len(statuselemetsnewvalues))+" Records inserted into MySql datapoint changelog table"
 	except:
 		# Rollback in case there is any error
 		db.rollback()
+		print "MySQL database update Failed"
 #print tabulate(scrapedata)
 
 
-print str(len(statuselemetsnewvalues))+" Records inserted into MySql datapoint changelog table"
 
 #print len(updateelements)
 """
